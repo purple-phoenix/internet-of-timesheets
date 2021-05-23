@@ -1,7 +1,7 @@
 """Module for auto logging time spent on lichess"""
 
-from typing import Tuple, Optional
-from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
+from datetime import datetime, timedelta, timezone
 
 from time import sleep
 
@@ -9,7 +9,12 @@ import lichess.api
 
 LichessID = str
 ActivityInterval = Tuple[datetime, datetime]
-Game = str
+StartGameTimestamp = datetime
+LastMoveTimestamp = datetime
+GameTimestamps = Tuple[StartGameTimestamp, LastMoveTimestamp]
+Game = Tuple[Dict[str, Any],
+             GameTimestamps,
+             ]
 
 
 def get_most_recent_activity_interval(user_id: LichessID) -> ActivityInterval:
@@ -27,13 +32,14 @@ POLL_RATE = 5
 GAME_TIMEOUT = 5
 
 
-def update_chess_timesheet(maybe_last_latest_game: Optional[Game]):
+def update_chess_timesheet(lichess_id: LichessID,
+                           maybe_last_latest_game: Optional[Game]):
     """Look for new game,if tracking wait and check again,if not start tracking
     If no new game within timeout stop tracking at end of last game"""
-    latest_game = get_latest_game()
+    latest_game = get_latest_game(lichess_id)
     if is_tracking_lichess():
         sleep(POLL_RATE)
-        update_chess_timesheet(latest_game)
+        update_chess_timesheet(lichess_id, latest_game)
     should_stop_tracking, should_start_tracking = \
         no_new_game(latest_game, maybe_last_latest_game)
     if should_stop_tracking:
@@ -68,9 +74,12 @@ def no_new_game(latest_game: Game,
     return new_game_passed_timeout(latest_game, last_latest_game)
 
 
-def new_game_passed_timeout(latest_game: Game, last_latest_game: Game) -> TransitionState:
+def new_game_passed_timeout(latest_game: Game,
+                            last_latest_game: Game) -> TransitionState:
     """Determines if the latest_game is beyond
     the threshold of a new tracking event"""
+    assert latest_game
+    assert last_latest_game
 
 
 def is_tracking_lichess() -> bool:
@@ -79,12 +88,39 @@ def is_tracking_lichess() -> bool:
 
 def start_tracking(game: Game) -> None:
     """Starts tracking Lichess on Toggl"""
+    assert game
 
 
 def stop_tracking() -> None:
     """Stop tracking Lichess on Toggl"""
 
 
-def get_latest_game() -> Game:
+def get_latest_game(lichess_id: LichessID) -> Game:
     """Gets the latest game"""
-    return ""
+    games = lichess.api.user_games(lichess_id)
+    return make_game(next(games))
+
+
+def ms_epoch_to_datetime(epoch_in_ms: int,
+                         dtz: timezone = timezone.utc) -> datetime:
+    """Consumes an epoch in milliseconds and returns its equivalent datetime"""
+    msec = epoch_in_ms % 1000
+    seconds = epoch_in_ms // 1000
+    datetime_in_s = datetime.fromtimestamp(seconds, dtz)
+    datetime_in_ms = datetime_in_s + timedelta(milliseconds=msec)
+    return datetime_in_ms
+
+
+def make_game(game_dict: Dict[str, Any]) -> Game:
+    """Consumes json output and produces a game"""
+    start_game_epoch = game_dict["createdAt"]
+    last_move_epoch = game_dict["createdAt"]
+    start_game_ts = ms_epoch_to_datetime(start_game_epoch)
+    last_move_ts = ms_epoch_to_datetime(last_move_epoch)
+
+    return game_dict, (start_game_ts, last_move_ts)
+
+
+
+
+
