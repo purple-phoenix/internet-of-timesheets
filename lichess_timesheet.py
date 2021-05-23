@@ -114,7 +114,7 @@ def ms_epoch_to_datetime(epoch_in_ms: int,
 def make_game(game_dict: Dict[str, Any]) -> Game:
     """Consumes json output and produces a game"""
     start_game_epoch = game_dict["createdAt"]
-    last_move_epoch = game_dict["createdAt"]
+    last_move_epoch = game_dict["lastMoveAt"]
     start_game_ts = ms_epoch_to_datetime(start_game_epoch)
     last_move_ts = ms_epoch_to_datetime(last_move_epoch)
 

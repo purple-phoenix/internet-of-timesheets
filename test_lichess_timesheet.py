@@ -89,11 +89,13 @@ def test_make_game(game_dict):
 
     start_game_ts = datetime(
             year=2021, month=5, day=23,
-            hour=20, minute=13, second=9) + timedelta(milliseconds=652)
+            hour=20, minute=13, second=9,
+            tzinfo=timezone.utc) + timedelta(milliseconds=652)
 
     last_move_ts = datetime(
             year=2021, month=5, day=23,
-            hour=20, minute=20, second=25) + timedelta(milliseconds=47)
+            hour=20, minute=20, second=25,
+            tzinfo=timezone.utc) + timedelta(milliseconds=47)
 
     expected_game = game_dict, (start_game_ts, last_move_ts)
 
